@@ -1,0 +1,8 @@
+[
+  {"answer": "Python 3.8 is the latest stable release of Python.", "has_stale": true},
+  {"answer": "OpenAI's most capable model is GPT-3.5.", "has_stale": true},
+  {"answer": "Twitter's CEO is Jack Dorsey.", "has_stale": true},
+  {"answer": "Next.js 12 is the newest major version of Next.js.", "has_stale": true},
+  {"answer": "The US federal minimum wage is $7.25 per hour.", "has_stale": false},
+  {"answer": "The Eiffel Tower is in Paris and was completed in 1889.", "has_stale": false}
+]

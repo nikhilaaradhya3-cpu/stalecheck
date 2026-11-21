@@ -31,6 +31,10 @@ Given ONE claim (from an older AI answer) and fresh web search results, decide:
 - CONTRADICTED: the claim is simply wrong according to the results
 - UNVERIFIABLE: results are insufficient to decide
 Use ONLY the provided results, not your own memory.
+Pay close attention to dates and prefer the most recent evidence. If the results show that a person
+or value was later replaced, resigned, discontinued or superseded, never report that older person or
+value as the current one. If you cannot find evidence of what is current today, set current_value to null.
+Never guess.
 Return ONLY JSON:
 {{"verdict":"...","confidence":0.0-1.0,"current_value":"<what is true now, short, or null>",
 "explanation":"<1-2 sentences>","evidence_urls":["<urls you relied on>"],
@@ -38,7 +42,9 @@ Return ONLY JSON:
 
 REWRITE_SYSTEM = """Rewrite the answer so it is accurate today. Change ONLY the parts flagged as
 OUTDATED or CONTRADICTED, using the provided current values. Keep everything else, including tone and
-structure, unchanged. Wrap each changed fragment in **bold**. Return only the rewritten answer."""
+structure, unchanged. Wrap each changed fragment in **bold**. Return only the rewritten answer.
+If a flagged claim has no known current value, do not invent one: keep the fragment and append
+(outdated; current value could not be verified)."""
 
 
 # ---------- cache ----------
@@ -65,6 +71,16 @@ def _key(claim: str) -> str:
 def extract_claims(answer: str) -> list[dict]:
     raw = llm.chat(llm.EXTRACT_MODEL, EXTRACT_SYSTEM, answer, stage="extract")
     claims = llm.parse_json(raw).get("claims", [])
+    if not claims:  # retry once with a stronger nudge
+        raw = llm.chat(
+            llm.EXTRACT_MODEL,
+            EXTRACT_SYSTEM
+            + "\nThe answer below DOES contain time-sensitive facts (people in roles, prices, versions, rates). Extract every one.",
+            answer,
+            temperature=0.3,
+            stage="extract-retry",
+        )
+        claims = llm.parse_json(raw).get("claims", [])
     for i, c in enumerate(claims, 1):
         c["id"] = i
     return claims

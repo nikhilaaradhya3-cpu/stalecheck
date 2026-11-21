@@ -15,7 +15,13 @@ EXTRACT_MODEL = os.getenv("EXTRACT_MODEL", "openai/gpt-4o-mini")
 JUDGE_MODEL = os.getenv("JUDGE_MODEL", "openai/gpt-4o")
 FALLBACKS = [m.strip() for m in os.getenv("FALLBACK_MODELS", "").split(",") if m.strip()]
 
-client = OpenAI(base_url=BASE_URL, api_key=os.getenv("BIFROST_API_KEY", "dummy"))
+VIRTUAL_KEY = os.getenv("BIFROST_VIRTUAL_KEY")
+
+client = OpenAI(
+    base_url=BASE_URL,
+    api_key=os.getenv("BIFROST_API_KEY", "dummy"),
+    default_headers={"x-bf-vk": VIRTUAL_KEY} if VIRTUAL_KEY else None,
+)
 
 # Per-call telemetry, shown in the UI "Gateway panel"
 STATS: list[dict] = []
@@ -62,7 +68,12 @@ def chat(model: str, system: str, user: str, temperature: float = 0.0, stage: st
                 "completion_tokens": getattr(usage, "completion_tokens", 0) or 0,
             }
         )
-    return resp.choices[0].message.content or ""
+        content = resp.choices[0].message.content
+    if isinstance(content, list):  # some models return a list of text parts
+        content = "".join(
+            p.get("text", "") if isinstance(p, dict) else str(p) for p in content
+        )
+    return content or ""
 
 
 def parse_json(text: str) -> dict:
